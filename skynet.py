@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 from __future__ import division
 
+import sys
 import random
 import ast
+import cStringIO as StringIO
 
 import codegen
 
@@ -11,6 +13,7 @@ class Skynet:
     def __init__(self):
         self.attempts = 0
         self.success = 0
+        self.best = 0
         self.reset()
 
     def reset(self):
@@ -26,34 +29,51 @@ class Skynet:
         module.body = []
         self.add_random_code(module.body)
         ast.fix_missing_locations(module)
+        return module
 
-        if 0:
-            print ast.dump(module)
+    def dump_module(self, module):
+        print ast.dump(module)
 
-        if 1:
-            print '-' * 80
-            print 'code:'
-            print '-' * 80,
-            from unparse import Unparser
-            up = Unparser(module)
+    def dump_code(self, module):
+        print '-' * 80
+        print 'code:'
+        print '-' * 80,
+        from unparse import Unparser
+        up = Unparser(module)
+        print
 
-        if 1:
-            print
-            print '-' * 80
-            print 'output:'
-            print '-' * 80
-
+    def run(self, module):
         self.attempts += 1
         try:
+
+            s = StringIO.StringIO()
+            sys.stdout = s
+
             exec(compile(module, '<string>', 'exec'))
+
+            sys.stdout = sys.__stdout__
+            values = s.getvalue().split()
+            total = 0
+            for v in values:
+                v = float(v)
+                total += v
+            
+            score = total * len(set(values))
+
+            if score > self.best:
+                self.best = score
+                self.dump_code(module)
+                print values, score
+                # raw_input()
+
             self.success += 1
-            raw_input()
         except Exception, e:
             print e
 
     def main(self):
         while 1:
-            self.generate()
+            module = self.generate()
+            self.run(module)
             
     def random_op(self):
         r = random.randint(0, 3)
