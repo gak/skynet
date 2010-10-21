@@ -18,6 +18,7 @@ class Skynet:
 
     def reset(self):
         self.func_depth = 0
+        self.loop_depth = 0
         self.vars = {
             'var': [],
             'fun': [],
@@ -27,7 +28,7 @@ class Skynet:
         self.reset()
         module = ast.Module()
         module.body = []
-        self.add_random_code(module.body)
+        module.body = self.random_body()
         ast.fix_missing_locations(module)
         return module
 
@@ -44,31 +45,41 @@ class Skynet:
 
     def run(self, module):
         self.attempts += 1
+
+        s = StringIO.StringIO()
+        sys.stdout = s
         try:
-
-            s = StringIO.StringIO()
-            sys.stdout = s
-
             exec(compile(module, '<string>', 'exec'))
+            self.success += 1
+            fail = False
+        except Exception, e:
+            fail = True
+        sys.stdout = sys.__stdout__
 
-            sys.stdout = sys.__stdout__
+        if fail:
+            return
+
+        if not fail:
             values = s.getvalue().split()
             total = 0
             for v in values:
-                v = float(v)
+                try:
+                    v = float(v)
+                except:
+                    continue
                 total += v
-            
             score = total * len(set(values))
-
-            if score > self.best:
+            if not fail and score > self.best:
                 self.best = score
-                self.dump_code(module)
-                print values, score
-                # raw_input()
+            else:
+                return
+        
+        self.dump_code(module)
+        print values, score
+        raw_input('?')
 
-            self.success += 1
-        except Exception, e:
-            print e
+        if fail:
+            return
 
     def main(self):
         while 1:
@@ -134,7 +145,7 @@ class Skynet:
             args=[], keywords=[], starargs=None, kwargs=None)
 
     def random_state(self):
-        r = random.randint(0, 4)
+        r = random.randint(0, 5)
         if r == 0:
             var = self.random_expr()
             if not var:
@@ -154,8 +165,7 @@ class Skynet:
             if not func_name:
                 return
             self.func_depth += 1
-            body = []
-            self.add_random_code(body)
+            body = self.random_body()
             if not len(body):
                 self.func_depth -= 1
                 return
@@ -177,6 +187,22 @@ class Skynet:
             if not var:
                 return
             return ast.Return(value=var)
+        if r == 5:
+            if self.loop_depth > 2:
+                return
+            self.loop_depth += 1
+            iter = self.random_iter()
+            if not iter:
+                self.loop_depth -= 1
+                return
+            var = self.random_var_store()
+            body = self.random_body()
+            if not body:
+                self.loop_depth -= 1
+                return
+            f = ast.For(target=var, iter=iter, body=body, orelse=[])
+            self.loop_depth -= 1
+            return f
 
     def random_expr(self):
         r = random.randint(0, 3)
@@ -200,12 +226,19 @@ class Skynet:
         if r == 3:
             return self.random_call()
 
-    def add_random_code(self, body, count=20):
+    def random_iter(self):
+        r = random.randint(1, 10)
+        return ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[ast.Num(n=r)],
+            keywords=[], starargs=None, kwargs=None)
+
+    def random_body(self, count=5):
+        body = []
         for a in xrange(count):
             statement = self.random_state()
             if not statement:
                 continue
             body.append(statement)
+        return body
 
 Skynet().main()
 
