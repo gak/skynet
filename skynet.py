@@ -84,7 +84,7 @@ class Skynet:
         return ast.Call(func=self.random_func_var(), args=[], keywords=[], starargs=None, kwargs=None)
 
     def random_state(self):
-        r = random.randint(0, 3)
+        r = random.randint(0, 4)
         if r == 0:
             return ast.Print(values=[self.random_expr()], nl=True, dest=None)
         if r == 1:
@@ -104,6 +104,10 @@ class Skynet:
         if r == 3:
             c = self.random_call()
             return ast.Expr(value=c)
+        if r == 4:
+            if self.func_depth == 0:
+                return ast.Pass()
+            return ast.Return(value=self.random_expr())
 
     def random_expr(self):
         r = random.randint(0, 3)
