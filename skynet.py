@@ -32,20 +32,19 @@ class Skynet:
         if fail:
             return
 
-        if not fail:
-            values = s.getvalue().split()
-            total = 0
-            for v in values:
-                try:
-                    v = float(v)
-                except:
-                    continue
-                total += v
-            score = total * len(set(values))
-            if not fail and score > self.best:
-                self.best = score
-            else:
-                return
+        values = s.getvalue().split()
+        total = 0
+        for v in values:
+            try:
+                v = float(v)
+            except:
+                continue
+            total += v
+        score = total * len(set(values))
+        if score > self.best:
+            self.best = score
+        else:
+            return
         
         app.dump_code(module)
         print values, score
@@ -151,7 +150,7 @@ class SkynetApp:
             args=[], keywords=[], starargs=None, kwargs=None)
 
     def random_state(self):
-        r = random.randint(0, 5)
+        r = random.randint(0, 6)
         if r == 0:
             var = self.random_expr()
             if not var:
@@ -209,9 +208,11 @@ class SkynetApp:
             f = ast.For(target=var, iter=iter, body=body, orelse=[])
             self.loop_depth -= 1
             return f
+        if r == 6:
+            return self.random_cond()
 
     def random_expr(self):
-        r = random.randint(0, 3)
+        r = random.randint(0, 2)
         if r == 0:
             return ast.Num(n=random.randint(0, 10))
         if r == 1:
@@ -231,6 +232,23 @@ class SkynetApp:
             return var
         if r == 3:
             return self.random_call()
+
+    def random_cond(self):
+        var1 = self.random_expr()
+        if not var1:
+            return
+        var2 = self.random_expr()
+        if not var2:
+            return
+        body = self.random_body()
+        if not body:
+            return
+        elsebody = self.random_body()
+        if not elsebody:
+            return
+        cmp = random.choice([ast.Eq(), ast.Gt(), ast.Lt()])
+        return ast.If(ast.Compare(left=var1, comparators=[var2], ops=cmp,
+                body=body, orelse=elsebody))
 
     def random_iter(self):
         r = random.randint(1, 10)
