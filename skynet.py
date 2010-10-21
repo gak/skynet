@@ -14,36 +14,9 @@ class Skynet:
         self.attempts = 0
         self.success = 0
         self.best = 0
-        self.reset()
 
-    def reset(self):
-        self.func_depth = 0
-        self.loop_depth = 0
-        self.vars = {
-            'var': [],
-            'fun': [],
-        }
-
-    def generate(self):
-        self.reset()
-        module = ast.Module()
-        module.body = []
-        module.body = self.random_body()
-        ast.fix_missing_locations(module)
-        return module
-
-    def dump_module(self, module):
-        print ast.dump(module)
-
-    def dump_code(self, module):
-        print '-' * 80
-        print 'code:'
-        print '-' * 80,
-        from unparse import Unparser
-        up = Unparser(module)
-        print
-
-    def run(self, module):
+    def run(self, app):
+        module = app.generate()
         self.attempts += 1
 
         s = StringIO.StringIO()
@@ -74,18 +47,51 @@ class Skynet:
             else:
                 return
         
-        self.dump_code(module)
+        app.dump_code(module)
         print values, score
-        raw_input('?')
+        raw_input('? ')
 
         if fail:
             return
 
     def main(self):
         while 1:
-            module = self.generate()
-            self.run(module)
-            
+            app = SkynetApp()
+            self.run(app)
+           
+
+class SkynetApp:
+    
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.func_depth = 0
+        self.loop_depth = 0
+        self.vars = {
+            'var': [],
+            'fun': [],
+        }
+
+    def generate(self):
+        self.reset()
+        module = ast.Module()
+        module.body = []
+        module.body = self.random_body()
+        ast.fix_missing_locations(module)
+        return module
+
+    def dump_module(self, module):
+        print ast.dump(module)
+
+    def dump_code(self, module):
+        print '-' * 80
+        print 'code:'
+        print '-' * 80,
+        from unparse import Unparser
+        up = Unparser(module)
+        print
+
     def random_op(self):
         r = random.randint(0, 3)
         if r == 0:
