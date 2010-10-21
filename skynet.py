@@ -27,7 +27,7 @@ class Skynet:
         self.add_random_code(module.body)
         ast.fix_missing_locations(module)
 
-        if 1:
+        if 0:
             print ast.dump(module)
 
         if 1:
@@ -109,7 +109,7 @@ class Skynet:
     def random_call(self):
         func = self.random_func_var()
         if not func:
-            return ast.Pass()
+            return
         return ast.Call(func=func,
             args=[], keywords=[], starargs=None, kwargs=None)
 
@@ -129,10 +129,10 @@ class Skynet:
                 value=var)
         if r == 2:
             if self.func_depth > 0:
-                return ast.Pass()
+                return
             func_name = self.random_func_name()
             if not func_name:
-                return ast.Pass()
+                return
             self.func_depth += 1
             body = []
             self.add_random_code(body)
@@ -147,10 +147,12 @@ class Skynet:
             return f
         if r == 3:
             c = self.random_call()
+            if not c:
+                return
             return ast.Expr(value=c)
         if r == 4:
             if self.func_depth == 0:
-                return ast.Pass()
+                return
             var = self.random_expr()
             if not var:
                 return
@@ -178,7 +180,7 @@ class Skynet:
         if r == 3:
             return self.random_call()
 
-    def add_random_code(self, body, count=5):
+    def add_random_code(self, body, count=20):
         for a in xrange(count):
             statement = self.random_state()
             if not statement:
