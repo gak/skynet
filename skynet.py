@@ -11,13 +11,24 @@ class Skynet:
     def __init__(self):
         self.attempts = 0
         self.success = 0
+        self.reset()
+
+    def reset(self):
         self.func_depth = 0
+        self.vars = {
+            'var': [],
+            'fun': [],
+        }
 
     def generate(self):
+        self.reset()
         module = ast.Module()
         module.body = []
         self.add_random_code(module.body)
         ast.fix_missing_locations(module)
+
+        if 1:
+            print ast.dump(module)
 
         if 1:
             print '-' * 80
@@ -55,48 +66,81 @@ class Skynet:
         if r == 3:
             return ast.Div()
 
-    def random_var_name(self, prefix, range):
-        r = random.randint(0, range)
-        c = chr(ord('a') + r)
-        return prefix + '_' + c
+    def random_var_name(self, prefix, range, existing):
+        if existing:
+            try:
+                return random.choice(self.vars[prefix])
+            except IndexError:
+                return
+        else:
+            r = random.randint(0, range)
+            c = chr(ord('a') + r)
+            n = prefix + '_' + c
+            self.vars[prefix].append(n)
+            return n
 
-    def random_func_name(self):
-        return self.random_var_name('fun', 3)
-
-    def random_var(self):
-        return ast.Name(id=self.random_var_name('var', 3))
+    def random_var(self, existing):
+        n = self.random_var_name('var', 3, existing)
+        if not n:
+            return
+        return ast.Name(id=n)
 
     def random_var_store(self):
-        v = self.random_var()
+        v = self.random_var(existing=False)
         v.ctx = ast.Store()
         return v
 
     def random_var_load(self):
-        v = self.random_var()
+        v = self.random_var(existing=True)
+        if not v:
+            return
         v.ctx = ast.Load()
         return v
 
+    def random_func_name(self, existing=False):
+        return self.random_var_name('fun', 3, existing)
+
     def random_func_var(self):
-        n = self.random_func_name()
+        n = self.random_func_name(existing=True)
+        if not n:
+            return
         return ast.Name(id=n, ctx=ast.Load())
 
     def random_call(self):
-        return ast.Call(func=self.random_func_var(), args=[], keywords=[], starargs=None, kwargs=None)
+        func = self.random_func_var()
+        if not func:
+            return ast.Pass()
+        return ast.Call(func=func,
+            args=[], keywords=[], starargs=None, kwargs=None)
 
     def random_state(self):
         r = random.randint(0, 4)
         if r == 0:
-            return ast.Print(values=[self.random_expr()], nl=True, dest=None)
+            var = self.random_expr()
+            if not var:
+                return
+            return ast.Print(values=[var], nl=True, dest=None)
         if r == 1:
-            return ast.Assign(targets=[self.random_var_store()], value=self.random_expr())
+            var = self.random_expr()
+            if not var:
+                return
+            return ast.Assign(
+                targets=[self.random_var_store()],
+                value=var)
         if r == 2:
             if self.func_depth > 0:
                 return ast.Pass()
+            func_name = self.random_func_name()
+            if not func_name:
+                return ast.Pass()
             self.func_depth += 1
             body = []
-            self.add_random_code(body, 5)
+            self.add_random_code(body)
+            if not len(body):
+                self.func_depth -= 1
+                return
             f = ast.FunctionDef(body=body, decorator_list=[],
-                    name=self.random_func_name(),
+                    name=func_name,
                     args=ast.arguments(args=[], kwarg=None, defaults=[],
                         vararg=None))
             self.func_depth -= 1
@@ -107,25 +151,39 @@ class Skynet:
         if r == 4:
             if self.func_depth == 0:
                 return ast.Pass()
-            return ast.Return(value=self.random_expr())
+            var = self.random_expr()
+            if not var:
+                return
+            return ast.Return(value=var)
 
     def random_expr(self):
         r = random.randint(0, 3)
         if r == 0:
             return ast.Num(n=random.randint(0, 10))
         if r == 1:
+            left = self.random_expr()
+            right = self.random_expr()
+            if not left or not right:
+                return
             return ast.BinOp(
-                left=self.random_expr(),
+                left=left,
                 op=self.random_op(),
-                right=self.random_expr())
+                right=right
+                )
         if r == 2:
-            return self.random_var_load()
+            var = self.random_var_load()
+            if not var:
+                return
+            return var
         if r == 3:
             return self.random_call()
 
     def add_random_code(self, body, count=5):
         for a in xrange(count):
-            body.append(self.random_state())
+            statement = self.random_state()
+            if not statement:
+                continue
+            body.append(statement)
 
 Skynet().main()
 
