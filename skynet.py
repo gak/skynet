@@ -27,10 +27,8 @@ class Skynet:
             fail = False
         except Exception, e:
             fail = True
+            print e
         sys.stdout = sys.__stdout__
-
-        if fail:
-            return
 
         values = s.getvalue().split()
         total = 0
@@ -43,8 +41,6 @@ class Skynet:
         score = total * len(set(values))
         if score > self.best:
             self.best = score
-        else:
-            return
         
         app.dump_code(module)
         print values, score
@@ -150,7 +146,7 @@ class SkynetApp:
             args=[], keywords=[], starargs=None, kwargs=None)
 
     def random_state(self):
-        r = random.randint(0, 6)
+        r = random.randint(0, 5)
         if r == 0:
             var = self.random_expr()
             if not var:
